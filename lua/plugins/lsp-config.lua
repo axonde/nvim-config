@@ -1,10 +1,13 @@
 return {
+	-- Mason: Установщик LSP серверов
 	{
 		"williamboman/mason.nvim",
 		config = function()
 			require("mason").setup()
 		end,
 	},
+
+	-- Mason-LSP: Автоустановка серверов
 	{
 		"williamboman/mason-lspconfig.nvim",
 		dependencies = {
@@ -21,36 +24,39 @@ return {
 					"pyright",
 					"emmet_language_server",
 					"eslint",
-					"ts_ls", -- Исправлено имя сервера
+					"ts_ls",
 				},
 			})
 		end,
 	},
+
+	-- Настройка LSP клиента
 	{
 		"neovim/nvim-lspconfig",
-		dependencies = {
-			"hrsh7th/nvim-cmp",
-		},
+		dependencies = { "hrsh7th/nvim-cmp" },
 		config = function()
-			-- Общие настройки LSP
+			-- Глобальные настройки диагностики
 			vim.diagnostic.config({
 				virtual_text = true,
 				update_in_insert = false,
 			})
 
-			-- Общая функция on_attach
+			--[[ 1. on_attach ]]
 			local on_attach = function(client, bufnr)
-				-- Keymaps для всех LSP
-				vim.keymap.set("n", "<leader>i", vim.lsp.buf.hover, { buffer = bufnr })
+				-- Keymaps для всех LSP серверов
+				vim.keymap.set("n", "<leader>i", vim.lsp.buf.hover, { buffer = bufnr, desc = "Hover info" })
+
 				vim.keymap.set({ "n", "v" }, "<leader>lf", function()
 					vim.lsp.buf.format({ async = false })
 				end, { buffer = bufnr, desc = "[L]SP [F]ormat" })
+
 				vim.keymap.set(
 					{ "n", "v" },
 					"<leader>ca",
 					vim.lsp.buf.code_action,
-					{ buffer = bufnr, desc = "[L]SP Code [A]ctions" }
+					{ buffer = bufnr, desc = "LSP [C]ode [A]ctions" }
 				)
+
 				vim.keymap.set(
 					{ "n", "v" },
 					"<leader>ld",
@@ -59,7 +65,7 @@ return {
 				)
 			end
 
-			-- Настройка capabilities
+			--[[ 2. CAPABILITIES ]]
 			local capabilities = vim.lsp.protocol.make_client_capabilities()
 			local cmp_ok, cmp_nvim_lsp = pcall(require, "cmp_nvim_lsp")
 			if cmp_ok then
@@ -67,32 +73,23 @@ return {
 			end
 
 			local lspconfig = require("lspconfig")
-			local util = require("lspconfig.util")
 
-			-- Универсальный способ настройки серверов
-			local servers = {
-				"lua_ls",
-				"clangd",
-				"svelte",
-				"omnisharp",
-				"pyright",
-				"emmet_language_server",
-				"eslint",
-				"ts_ls", -- Исправлено имя сервера
-			}
-
-			-- Базовые настройки для всех серверов
-			for _, server in ipairs(servers) do
+			--[[ 3. НАСТРОЙКА СЕРВЕРОВ ]]
+			-- Базовые серверы без спец. настроек
+			local base_servers = { "omnisharp", "pyright", "emmet_language_server" }
+			for _, server in ipairs(base_servers) do
 				lspconfig[server].setup({
 					capabilities = capabilities,
 					on_attach = on_attach,
 				})
 			end
 
-			-- Специфичные настройки для отдельных серверов
+			-- Специфичные настройки серверов
 
 			-- Lua
 			lspconfig.lua_ls.setup({
+				capabilities = capabilities,
+				on_attach = on_attach,
 				settings = {
 					Lua = {
 						telemetry = { enable = false },
@@ -103,8 +100,10 @@ return {
 				},
 			})
 
-			-- Clangd
+			-- Clangd (C/C++)
 			lspconfig.clangd.setup({
+				capabilities = capabilities,
+				on_attach = on_attach,
 				cmd = {
 					"clangd",
 					"--background-index",
@@ -120,82 +119,66 @@ return {
 
 			-- ESLint
 			lspconfig.eslint.setup({
+				capabilities = capabilities,
+				on_attach = on_attach,
 				settings = {
 					eslint = {
 						validate = "on",
-						run = "onType",
-						codeAction = {
-							disableRuleComment = {
-								enable = true,
-								location = "separateLine",
-							},
-							showDocumentation = {
-								enable = true,
-							},
-						},
-						experimental = {
-							useFlatConfig = true,
-						},
-						workingDirectory = {
-							mode = "auto",
-						},
+						codeAction = { disableRuleComment = { enable = true } },
+						experimental = { useFlatConfig = true },
+						workingDirectory = { mode = "auto" },
 					},
 				},
 			})
 
 			-- Svelte
 			lspconfig.svelte.setup({
+				capabilities = capabilities,
 				on_attach = function(client, bufnr)
-					on_attach(client, bufnr) -- Вызываем общую on_attach
+					on_attach(client, bufnr) -- Общие keymaps
 
-					-- Форматирование при сохранении
+					-- Автоформатирование при сохранении
 					vim.api.nvim_create_autocmd("BufWritePre", {
 						buffer = bufnr,
 						callback = function()
 							vim.lsp.buf.format({ async = false })
 						end,
 					})
-
-					-- Определение языка для Svelte
-					local content = vim.api.nvim_buf_get_lines(bufnr, 0, 10, false)
-					local lang = "javascript" -- по умолчанию
-
-					for _, line in ipairs(content) do
-						if line:match("<script%s+lang=%s?['\"]ts") then
-							lang = "typescript"
-							break
-						end
-					end
-
-					-- Устанавливаем переменную буфера
-					vim.b[bufnr].svelte_lang = lang
 				end,
 			})
 
 			-- TypeScript/JavaScript
-			lspconfig.ts_ls.setup({ -- Исправлено имя сервера
-				on_attach = function(client, bufnr)
-					on_attach(client, bufnr) -- Общие keymaps
+			lspconfig.ts_ls.setup({
+				capabilities = capabilities,
+				on_attach = on_attach, -- Используем общий on_attach
 
-					-- Определяем тип файла
-					local ft = vim.bo[bufnr].filetype
-
-					-- Для JavaScript отключаем диагностику
-					if ft == "javascript" or ft == "javascriptreact" or ft == "javascript.jsx" then
-						client.server_capabilities.diagnosticProvider = false
-					end
-				end,
-				root_dir = function(fname)
-					return util.root_pattern("tsconfig.json", "jsconfig.json", "package.json")(fname)
-						or util.path.dirname(fname)
-				end,
+				-- Ключевые настройки для JS!
 				init_options = {
 					preferences = {
 						includeCompletionsForModuleExports = true,
 						includeCompletionsWithInsertText = true,
+						-- Отключаем проверку типов в JS файлах
+						disableSuggestions = true,
+					},
+					-- Форсируем использование JSDoc вместо TS проверок
+					plugins = {
+						{
+							name = "typescript-plugin",
+							location = vim.fn.stdpath("data")
+								.. "/mason/packages/typescript-language-server/node_modules/typescript-plugin",
+							enableForJS = true,
+							jsDocParsing = true,
+							tsChecker = false, -- Выключаем проверщик типов!
+						},
 					},
 				},
-				single_file_support = true,
+				-- Настройки для разных типов файлов
+				filetypes = { "javascript", "javascriptreact", "typescript", "typescriptreact" },
+				settings = {
+					completions = {
+						completeFunctionCalls = true,
+					},
+				},
 			})
 		end,
 	},
