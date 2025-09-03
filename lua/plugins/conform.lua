@@ -2,15 +2,15 @@ return {
 	"stevearc/conform.nvim",
 	event = { "BufWritePre" },
 	cmd = { "ConformInfo" },
-	keys = {
-		{
-			"<leader>f",
-			function()
-				require("conform").format({ async = true, lsp_fallback = true })
-			end,
-			desc = "[F]ormat buffer",
-		},
-	},
+	-- keys = {
+	-- 	{
+	-- 		"<leader>f",
+	-- 		function()
+	-- 			require("conform").format({ async = true, lsp_fallback = true })
+	-- 		end,
+	-- 		desc = "[F]ormat buffer",
+	-- 	},
+	-- },
 	opts = {
 		formatters_by_ft = {
 			lua = { "stylua" },
@@ -41,5 +41,6 @@ return {
 				async = false,
 			}
 		end,
+		log_level = vim.log.levels.WARN,
 	},
 }
