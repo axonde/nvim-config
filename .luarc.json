@@ -4,6 +4,7 @@
         "irint",
         "c",
         "on_attach",
-        "util"
+        "util",
+        "psql"
     ]
 }
