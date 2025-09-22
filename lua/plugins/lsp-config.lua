@@ -35,7 +35,6 @@ return {
 		"neovim/nvim-lspconfig",
 		dependencies = { "hrsh7th/nvim-cmp" },
 		config = function()
-			-- Глобальные настройки диагностики
 			vim.diagnostic.config({
 				virtual_text = true,
 				update_in_insert = false,
@@ -72,22 +71,22 @@ return {
 				capabilities = cmp_nvim_lsp.default_capabilities()
 			end
 
-			local lspconfig = require("lspconfig")
-
 			--[[ 3. НАСТРОЙКА СЕРВЕРОВ ]]
+
 			-- Базовые серверы без спец. настроек
 			local base_servers = { "omnisharp", "pyright", "emmet_language_server" }
 			for _, server in ipairs(base_servers) do
-				lspconfig[server].setup({
+				vim.lsp.config(server, {
 					capabilities = capabilities,
 					on_attach = on_attach,
 				})
+				vim.lsp.enable(server)
 			end
 
 			-- Специфичные настройки серверов
 
 			-- Lua
-			lspconfig.lua_ls.setup({
+			vim.lsp.config("lua_ls", {
 				capabilities = capabilities,
 				on_attach = on_attach,
 				settings = {
@@ -99,9 +98,10 @@ return {
 					},
 				},
 			})
+			vim.lsp.enable("lua_ls")
 
 			-- Clangd (C/C++)
-			lspconfig.clangd.setup({
+			vim.lsp.config("clangd", {
 				capabilities = capabilities,
 				on_attach = on_attach,
 				cmd = {
@@ -116,9 +116,10 @@ return {
 					compilationDatabasePath = "build",
 				},
 			})
+			vim.lsp.enable("clangd")
 
 			-- ESLint
-			lspconfig.eslint.setup({
+			vim.lsp.config("eslint", {
 				capabilities = capabilities,
 				on_attach = on_attach,
 				settings = {
@@ -130,9 +131,10 @@ return {
 					},
 				},
 			})
+			vim.lsp.enable("eslint")
 
 			-- Svelte
-			lspconfig.svelte.setup({
+			vim.lsp.config("svelte", {
 				capabilities = capabilities,
 				on_attach = function(client, bufnr)
 					on_attach(client, bufnr) -- Общие keymaps
@@ -146,11 +148,12 @@ return {
 					})
 				end,
 			})
+			vim.lsp.enable("svelte")
 
 			-- TypeScript/JavaScript
-			lspconfig.ts_ls.setup({
+			vim.lsp.config("ts_ls", {
 				capabilities = capabilities,
-				on_attach = on_attach, -- Используем общий on_attach
+				on_attach = on_attach,
 
 				-- Ключевые настройки для JS!
 				init_options = {
@@ -180,6 +183,7 @@ return {
 					},
 				},
 			})
+			vim.lsp.enable("ts_ls")
 		end,
 	},
 }
