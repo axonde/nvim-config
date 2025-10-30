@@ -20,7 +20,6 @@ return {
 					"lua_ls",
 					"clangd",
 					"svelte",
-					"omnisharp",
 					"pyright",
 					"emmet_language_server",
 					"eslint",
@@ -40,29 +39,57 @@ return {
 				update_in_insert = false,
 			})
 
-			--[[ 1. on_attach ]]
-			local on_attach = function(client, bufnr)
-				-- Keymaps для всех LSP серверов
-				vim.keymap.set("n", "<leader>i", vim.lsp.buf.hover, { buffer = bufnr, desc = "Hover info" })
+			-- Глобальные keymaps для всех LSP серверов
+			vim.api.nvim_create_autocmd("LspAttach", {
+				group = vim.api.nvim_create_augroup("UserLspConfig", {}),
+				callback = function(args)
+					local bufnr = args.buf
+					local client = vim.lsp.get_client_by_id(args.data.client_id)
 
-				vim.keymap.set({ "n", "v" }, "<leader>lf", function()
-					vim.lsp.buf.format({ async = false })
-				end, { buffer = bufnr, desc = "[L]SP [F]ormat" })
+					-- Keymaps для всех LSP серверов
+					vim.keymap.set("n", "<leader>i", vim.lsp.buf.hover, { buffer = bufnr, desc = "Hover [I]nfo" })
 
-				vim.keymap.set(
-					{ "n", "v" },
-					"<leader>ca",
-					vim.lsp.buf.code_action,
-					{ buffer = bufnr, desc = "LSP [C]ode [A]ctions" }
-				)
+					vim.keymap.set({ "n", "v" }, "<leader>lf", function()
+						vim.lsp.buf.format({ async = false })
+					end, { buffer = bufnr, desc = "[L]SP [F]ormat" })
 
-				vim.keymap.set(
-					{ "n", "v" },
-					"<leader>ld",
-					vim.diagnostic.open_float,
-					{ buffer = bufnr, desc = "[L]SP [D]iagnostics" }
-				)
-			end
+					vim.keymap.set(
+						{ "n", "v" },
+						"<leader>ca",
+						vim.lsp.buf.code_action,
+						{ buffer = bufnr, desc = "LSP [C]ode [A]ctions" }
+					)
+
+					vim.keymap.set(
+						{ "n", "v" },
+						"<leader>ld",
+						vim.diagnostic.open_float,
+						{ buffer = bufnr, desc = "[L]SP [D]iagnostics" }
+					)
+
+					-- Дополнительные keymaps по желанию
+					vim.keymap.set("n", "gd", vim.lsp.buf.definition, { buffer = bufnr, desc = "[G]o to [d]efinition" })
+					vim.keymap.set(
+						"n",
+						"gD",
+						vim.lsp.buf.declaration,
+						{ buffer = bufnr, desc = "[G]o to [D]eclaration" }
+					)
+					vim.keymap.set("n", "gr", vim.lsp.buf.references, { buffer = bufnr, desc = "[G]o to [R]eferences" })
+					vim.keymap.set(
+						"n",
+						"gi",
+						vim.lsp.buf.implementation,
+						{ buffer = bufnr, desc = "[G]o to [I]mplementation" }
+					)
+					vim.keymap.set(
+						"n",
+						"<leader>rn",
+						vim.lsp.buf.rename,
+						{ buffer = bufnr, desc = "[R]e[N]ame symbol" }
+					)
+				end,
+			})
 
 			--[[ 2. CAPABILITIES ]]
 			local capabilities = vim.lsp.protocol.make_client_capabilities()
@@ -73,17 +100,13 @@ return {
 
 			--[[ 3. НАСТРОЙКА СЕРВЕРОВ ]]
 
-			-- Базовые серверы без спец. настроек
-			local base_servers = { "omnisharp", "pyright", "emmet_language_server" }
-			for _, server in ipairs(base_servers) do
-				vim.lsp.config(server, {
-					capabilities = capabilities,
-					on_attach = on_attach,
-				})
-				vim.lsp.enable(server)
-			end
+			require("mason-lspconfig").setup({
+				function(server)
+					vim.lsp.config(server, { capabilities = capabilities })
+				end,
+			})
 
-			-- Специфичные настройки серверов
+			-- [[ 4. Специфичные настройки серверов ]]
 
 			-- Lua
 			vim.lsp.config("lua_ls", {
